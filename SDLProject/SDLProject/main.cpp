@@ -48,6 +48,9 @@ float g_angle    = 0.0f;        // current angle accumulated
 float g_x_coords = RADIUS;      // current x-coord
 float g_y_coords = 0.0f;
 
+const float GROWTH_FACTOR = 1.1f;  // grow by 1.0% / frame
+const float SHRINK_FACTOR = 0.99f;  // grow by -1.0% / frame
+
 
 SDL_Window* display_window;
 bool game_is_running = true;
@@ -72,6 +75,8 @@ glm::vec3 player_rotation    = glm::vec3(0.0f, 0.0f, 0.0f);
 
 float player_speed = 1.0f;  // move 1 unit per second
 float other_speed = 1.5f;
+
+bool g_is_growing = true;
 #define LOG(argument) std::cout << argument << '\n'
 
 const int NUMBER_OF_TEXTURES = 1; // to be generated, that is
@@ -109,7 +114,7 @@ GLuint load_texture(const char* filepath)
 void initialise()
 {
     SDL_Init(SDL_INIT_VIDEO);
-    display_window = SDL_CreateWindow("Hello, Textures!",
+    display_window = SDL_CreateWindow("Planet moment",
                                       SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED,
                                       WINDOW_WIDTH, WINDOW_HEIGHT,
                                       SDL_WINDOW_OPENGL);
@@ -172,6 +177,10 @@ void update()
     float delta_time = ticks - previous_ticks; // the delta time is the difference from the last frame
     previous_ticks = ticks;
     
+    glm::vec3 scale_vector;
+       
+    scale_vector = glm::vec3(GROWTH_FACTOR, GROWTH_FACTOR, 1.0f);
+    
     
     // Add direction * units per second * elapsed time
     player_position += player_movement * player_speed * delta_time;
@@ -191,8 +200,10 @@ void update()
     // 3. Reset model matrix back to the origin, and apply translation based on step 2
     other_model_matrix = g_model_matrix;
     other_model_matrix = glm::translate(other_model_matrix, glm::vec3(g_x_coords, g_y_coords, 0.0f));
-    other_model_matrix = glm::rotate(other_model_matrix, ROT_ANGLE, glm::vec3(0.0f, 1.0f, 0.0f));
+    other_model_matrix = glm::rotate(other_model_matrix, ROT_ANGLE, glm::vec3(0.0f, 5.0f, 0.0f));
     
+    other_model_matrix =glm::scale(other_model_matrix, scale_vector);
+
    
 }
 
@@ -200,7 +211,14 @@ void draw_object(glm::mat4 &object_model_matrix, GLuint &object_texture_id)
 {
     g_program.set_model_matrix(object_model_matrix);
     glBindTexture(GL_TEXTURE_2D, object_texture_id);
-    glDrawArrays(GL_SQUARE_NV, 0, 8); // we are now drawing 2 triangles, so we use 6 instead of 3
+    glDrawArrays(GL_TRIANGLES, 0, 6);
+    
+}
+void draw_object2(glm::mat4 &object_model_matrix, GLuint &object_texture_id)
+{
+    g_program.set_model_matrix(object_model_matrix);
+    glBindTexture(GL_TEXTURE_2D, object_texture_id);
+    glDrawArrays(GL_POLYGON, 0, 6);
 }
 
 void render() {
@@ -226,7 +244,7 @@ void render() {
     
     // Bind texture
     draw_object(g_model_matrix, player_texture_id);
-    draw_object(other_model_matrix, other_texture_id);
+    draw_object2(other_model_matrix, other_texture_id);
     
     // We disable two attribute arrays now
     glDisableVertexAttribArray(g_program.get_position_attribute());
